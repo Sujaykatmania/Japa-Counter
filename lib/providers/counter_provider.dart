@@ -168,7 +168,7 @@ class CounterNotifier extends StateNotifier<CounterState> {
         // Fresh Install -> Create one default mantra
         final newMantra = Mantra(
           id: _uuid.v4(),
-          name: "Om Namah Shivaya",
+          name: "Japa",
           count: 0,
           malaCount: 0,
           goal: 108,
