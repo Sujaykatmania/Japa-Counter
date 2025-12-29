@@ -18,11 +18,11 @@ class CircularProgressPainter extends CustomPainter {
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
     final radius = min(size.width, size.height) / 2;
-    final strokeWidth = 12.0;
+    const strokeWidth = 12.0;
 
     // Background Circle
     final bgPaint = Paint()
-      ..color = trackColor ?? Colors.white.withOpacity(0.05)
+      ..color = trackColor ?? Colors.white.withValues(alpha: 0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -40,7 +40,7 @@ class CircularProgressPainter extends CustomPainter {
 
     // Shadow/Glow behind the progress
     final glowPaint = Paint()
-      ..color = glowColor.withOpacity(0.5)
+      ..color = glowColor.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth + 8
       ..strokeCap = StrokeCap.round

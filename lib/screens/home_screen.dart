@@ -94,8 +94,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         painter: CircularProgressPainter(
                           progress: progress,
                           color: mantraColor,
-                          glowColor: mantraColor.withOpacity(0.5),
-                          trackColor: Colors.white.withOpacity(0.05),
+                          glowColor: mantraColor.withValues(alpha: 0.5),
+                          trackColor: Colors.white.withValues(alpha: 0.05),
                         ),
                       ),
                     ),
@@ -115,10 +115,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               width: 240,
                               height: 240,
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.05),
+                                color: Colors.white.withValues(alpha: 0.05),
                                 shape: BoxShape.circle,
                                 border: Border.all(
-                                  color: Colors.white.withOpacity(0.1),
+                                  color: Colors.white.withValues(alpha: 0.1),
                                 ),
                               ),
                             ),
@@ -135,7 +135,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           Text(
                             "MALA: ${activeMantra.malaCount}",
                             style: GoogleFonts.outfit(
-                                color: Colors.white.withOpacity(0.5),
+                                color: Colors.white.withValues(alpha: 0.5),
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                                 letterSpacing: 1.5),
@@ -169,7 +169,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 Text(
                   "Goal: ${activeMantra.goal}",
                   style: GoogleFonts.outfit(
-                    color: Colors.white.withOpacity(0.3),
+                    color: Colors.white.withValues(alpha: 0.3),
                     fontSize: 14,
                   ),
                 ),
@@ -195,9 +195,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
-                      border: Border.all(color: mantraColor.withOpacity(0.3)),
+                      border:
+                          Border.all(color: mantraColor.withValues(alpha: 0.3)),
                       borderRadius: BorderRadius.circular(30),
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                     ),
                     child: Text(
                       "HOLD TO RESET",
@@ -250,7 +251,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                       IconButton(
                         icon: Icon(Icons.settings,
-                            color: Colors.white.withOpacity(0.5)),
+                            color: Colors.white.withValues(alpha: 0.5)),
                         onPressed: () {
                           Navigator.push(
                               context,
@@ -379,7 +380,7 @@ class _StreakBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.1),
+        color: Colors.white.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -417,9 +418,9 @@ class _MantraSelector extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         decoration: BoxDecoration(
-            color: Colors.black.withOpacity(0.3),
+            color: Colors.black.withValues(alpha: 0.3),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withOpacity(0.1))),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1))),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -516,7 +517,8 @@ class _MantraSelector extends StatelessWidget {
                                     value: 'edit',
                                     child: Text("Edit",
                                         style: GoogleFonts.outfit(
-                                            color: const Color.fromARGB(255, 255, 255, 255))),
+                                            color: const Color.fromARGB(
+                                                255, 255, 255, 255))),
                                   ),
                                   if (mantras.length > 1)
                                     PopupMenuItem(
@@ -662,7 +664,7 @@ class _PulseTextState extends State<_PulseText>
             shadows: [
               Shadow(
                 blurRadius: 20,
-                color: widget.color.withOpacity(0.4),
+                color: widget.color.withValues(alpha: 0.4),
                 offset: const Offset(0, 0),
               ),
             ]),

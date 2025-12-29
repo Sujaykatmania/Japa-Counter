@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:japa_counter/main.dart';
-import 'package:japa_counter/providers/counter_provider.dart';
+// import 'package:japa_counter/providers/counter_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -19,8 +19,9 @@ void main() {
       return null;
     });
 
-    const MethodChannel('xyz.luan/audioplayers')
-        .setMockMethodCallHandler((MethodCall methodCall) async {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(const MethodChannel('xyz.luan/audioplayers'),
+            (MethodCall methodCall) async {
       return null;
     });
   });

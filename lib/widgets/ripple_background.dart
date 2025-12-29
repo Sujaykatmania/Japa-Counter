@@ -5,10 +5,10 @@ class RippleBackground extends StatefulWidget {
   final Color rippleColor;
 
   const RippleBackground({
-    Key? key,
+    super.key,
     required this.child,
     this.rippleColor = Colors.white,
-  }) : super(key: key);
+  });
 
   @override
   RippleBackgroundState createState() => RippleBackgroundState();
@@ -114,7 +114,7 @@ class _RipplePainter extends CustomPainter {
     final opacity = (1.0 - progress).clamp(0.0, 1.0);
 
     final paint = Paint()
-      ..color = color.withOpacity(opacity * 0.3)
+      ..color = color.withValues(alpha: opacity * 0.3)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4 * (1 - progress);
 
@@ -122,7 +122,7 @@ class _RipplePainter extends CustomPainter {
 
     // Fill slightly
     final fillPaint = Paint()
-      ..color = color.withOpacity(opacity * 0.05)
+      ..color = color.withValues(alpha: opacity * 0.05)
       ..style = PaintingStyle.fill;
     canvas.drawCircle(origin, currentRadius, fillPaint);
   }

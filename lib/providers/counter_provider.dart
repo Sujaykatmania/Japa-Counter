@@ -332,8 +332,8 @@ class CounterNotifier extends StateNotifier<CounterState> {
 
   int _calculateNewStreak(String today) {
     if (state.lastPracticeDate == null) return 1;
-    final last = DateTime.parse(state.lastPracticeDate!);
-    final diff = DateTime.now().difference(last).inDays;
+    // final last = DateTime.parse(state.lastPracticeDate!); // Unused
+    // final diff = DateTime.now().difference(last).inDays; // Unused
 
     // DateTime difference in days can be tricky with hours.
     // Better to parse YYYY-MM-DD strings to DateTimes at midnight

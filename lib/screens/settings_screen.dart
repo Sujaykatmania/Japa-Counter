@@ -102,7 +102,7 @@ class SettingsScreen extends ConsumerWidget {
                     color: Colors.white, fontWeight: FontWeight.bold),
               ),
             );
-          }).toList(),
+          }),
           const SizedBox(height: 50),
           Center(
             child: TextButton(
@@ -201,7 +201,7 @@ class _SettingsTile extends StatelessWidget {
           style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
       value: value,
       onChanged: onChanged,
-      activeColor: activeColor,
+      activeTrackColor: activeColor,
       contentPadding: EdgeInsets.zero,
     );
   }

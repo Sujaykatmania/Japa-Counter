@@ -23,7 +23,7 @@ class Mantra {
     int? color,
   }) {
     return Mantra(
-      id: this.id,
+      id: id,
       name: name ?? this.name,
       count: count ?? this.count,
       malaCount: malaCount ?? this.malaCount,

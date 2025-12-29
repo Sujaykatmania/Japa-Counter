@@ -8,7 +8,7 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   // We will handle system UI mode in the app, but setting a default here for now.
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
-  
+
   runApp(const ProviderScope(child: JapaCounterApp()));
 }
 
@@ -31,8 +31,8 @@ class JapaCounterApp extends StatelessWidget {
       colorScheme: ColorScheme.fromSeed(
         seedColor: const Color(0xFFFFD700), // Soft Gold
         brightness: Brightness.dark,
-        background: const Color(0xFF1E1E1E), // Deep Charcoal
-        surface: const Color(0xFF2C2C2C),
+        // background: const Color(0xFF1E1E1E), // Deprecated, using surface
+        surface: const Color(0xFF1E1E1E), // Deep Charcoal
       ),
       scaffoldBackgroundColor: const Color(0xFF1E1E1E),
       textTheme: GoogleFonts.outfitTextTheme(
