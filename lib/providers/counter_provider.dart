@@ -238,22 +238,32 @@ class CounterNotifier extends StateNotifier<CounterState> {
     _saveState();
   }
 
+  void updateMantra(String id, String newName, int newGoal) {
+    if (newName.isEmpty) return;
+
+    final updatedList = state.mantras.map((m) {
+      if (m.id == id) {
+        return m.copyWith(name: newName, goal: newGoal);
+      }
+      return m;
+    }).toList();
+
+    state = state.copyWith(mantras: updatedList);
+    _saveState();
+  }
+
   void deleteMantra(String id) {
+    // Prevent deleting if it's the only one (handled in UI too, but safety here)
+    if (state.mantras.length <= 1) return;
+
     final newMantras = state.mantras.where((m) => m.id != id).toList();
 
-    if (newMantras.isEmpty) {
-      // Create a default if all deleted
-      final defaultMantra = Mantra(
-        id: _uuid.v4(),
-        name: "Mantra",
-        color: _getRandomZenColor(),
-      );
-      newMantras.add(defaultMantra);
-    }
-
+    // Logic: If active is deleted, switch to the first one in the new list
     String? newSelectedId = state.selectedMantraId;
     if (state.selectedMantraId == id) {
-      newSelectedId = newMantras.first.id;
+      if (newMantras.isNotEmpty) {
+        newSelectedId = newMantras.first.id;
+      }
     }
 
     state =

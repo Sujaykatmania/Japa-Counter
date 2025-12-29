@@ -30,7 +30,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     if (activeMantra == null) {
       return const Scaffold(
         backgroundColor: Color(0xFF121212),
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFFFD700))),
+        body:
+            Center(child: CircularProgressIndicator(color: Color(0xFFFFD700))),
       );
     }
 
@@ -58,7 +59,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             rippleColor: mantraColor,
             child: Container(color: Colors.transparent),
           ),
-          
+
           // The Tap Detector covers the WHOLE screen
           // Only active in Focus Mode (Non-Tactile)
           if (!counterState.isTactileMode)
@@ -78,7 +79,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           // ------------------------------------------------
           // Wrapped in IgnorePointer so Focus Mode taps pass through it
           IgnorePointer(
-            ignoring: !counterState.isTactileMode, 
+            ignoring: !counterState.isTactileMode,
             child: Center(
               child: SizedBox(
                 width: 300,
@@ -104,7 +105,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       GestureDetector(
                         onTapDown: (details) {
                           notifier.increment();
-                          rippleKey.currentState?.addRipple(details.globalPosition);
+                          rippleKey.currentState
+                              ?.addRipple(details.globalPosition);
                         },
                         child: ClipOval(
                           child: BackdropFilter(
@@ -190,8 +192,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     );
                   },
                   child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 24, vertical: 12),
                     decoration: BoxDecoration(
                       border: Border.all(color: mantraColor.withOpacity(0.3)),
                       borderRadius: BorderRadius.circular(30),
@@ -223,9 +225,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             right: 0,
             child: GestureDetector(
               onTap: () {
-                 // Block taps here from falling through to the counter
+                // Block taps here from falling through to the counter
               },
-              behavior: HitTestBehavior.opaque, 
+              behavior: HitTestBehavior.opaque,
               child: SafeArea(
                 child: Container(
                   height: 80,
@@ -239,8 +241,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           child: _MantraSelector(
                             activeMantra: activeMantra,
                             mantras: counterState.mantras,
+                            notifier: notifier,
                             onSelect: (id) => notifier.selectMantra(id),
-                            onAdd: () => _showAddMantraDialog(context, notifier),
+                            onAdd: () =>
+                                _showAddMantraDialog(context, notifier),
                           ),
                         ),
                       ),
@@ -395,12 +399,14 @@ class _StreakBadge extends StatelessWidget {
 class _MantraSelector extends StatelessWidget {
   final Mantra activeMantra;
   final List<Mantra> mantras;
+  final CounterNotifier notifier;
   final Function(String) onSelect;
   final VoidCallback onAdd;
 
   const _MantraSelector(
       {required this.activeMantra,
       required this.mantras,
+      required this.notifier,
       required this.onSelect,
       required this.onAdd});
 
@@ -474,6 +480,8 @@ class _MantraSelector extends StatelessWidget {
                   ),
                   const Divider(color: Colors.white10),
                   ...mantras.map((m) => ListTile(
+                        contentPadding:
+                            const EdgeInsets.only(left: 16, right: 0),
                         leading: Container(
                             width: 12,
                             height: 12,
@@ -484,9 +492,44 @@ class _MantraSelector extends StatelessWidget {
                         subtitle: Text(
                             "Malas: ${m.malaCount}  •  Goal: ${m.goal}",
                             style: GoogleFonts.outfit(color: Colors.white54)),
-                        trailing: m.id == activeMantra.id
-                            ? const Icon(Icons.check, color: Color(0xFFFFD700))
-                            : null,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if (m.id == activeMantra.id)
+                              const Icon(Icons.check, color: Color(0xFFFFD700)),
+                            PopupMenuButton<String>(
+                              padding: EdgeInsets.zero,
+                              icon: const Icon(Icons.more_vert,
+                                  color: Colors.white54),
+                              onSelected: (value) {
+                                if (value == 'edit') {
+                                  Navigator.pop(ctx);
+                                  _showEditDialog(context, m);
+                                } else if (value == 'delete') {
+                                  Navigator.pop(ctx);
+                                  _showDeleteDialog(context, m);
+                                }
+                              },
+                              itemBuilder: (BuildContext context) {
+                                return [
+                                  PopupMenuItem(
+                                    value: 'edit',
+                                    child: Text("Edit",
+                                        style: GoogleFonts.outfit(
+                                            color: const Color.fromARGB(255, 255, 255, 255))),
+                                  ),
+                                  if (mantras.length > 1)
+                                    PopupMenuItem(
+                                      value: 'delete',
+                                      child: Text("Delete",
+                                          style: GoogleFonts.outfit(
+                                              color: Colors.red)),
+                                    ),
+                                ];
+                              },
+                            ),
+                          ],
+                        ),
                         onTap: () {
                           onSelect(m.id);
                           Navigator.pop(ctx);
@@ -494,6 +537,81 @@ class _MantraSelector extends StatelessWidget {
                       )),
                 ],
               ),
+            ));
+  }
+
+  void _showEditDialog(BuildContext context, Mantra mantra) {
+    final nameController = TextEditingController(text: mantra.name);
+    final goalController = TextEditingController(text: mantra.goal.toString());
+
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF2C2C2C),
+              title: Text("Edit Mantra",
+                  style: GoogleFonts.outfit(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    style: GoogleFonts.outfit(color: Colors.white),
+                    decoration: const InputDecoration(
+                        labelText: "Mantra Name",
+                        labelStyle: TextStyle(color: Colors.white54)),
+                  ),
+                  TextField(
+                    controller: goalController,
+                    keyboardType: TextInputType.number,
+                    style: GoogleFonts.outfit(color: Colors.white),
+                    decoration: const InputDecoration(
+                        labelText: "Goal",
+                        labelStyle: TextStyle(color: Colors.white54)),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("Cancel")),
+                TextButton(
+                  child: const Text("Save"),
+                  onPressed: () {
+                    final goal = int.tryParse(goalController.text) ?? 108;
+                    if (nameController.text.isNotEmpty) {
+                      notifier.updateMantra(
+                          mantra.id, nameController.text, goal);
+                      Navigator.pop(ctx);
+                    }
+                  },
+                )
+              ],
+            ));
+  }
+
+  void _showDeleteDialog(BuildContext context, Mantra mantra) {
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF2C2C2C),
+              title: Text("Delete Mantra?",
+                  style: GoogleFonts.outfit(color: Colors.white)),
+              content: Text(
+                  "Are you sure you want to delete '${mantra.name}'? This action cannot be undone.",
+                  style: GoogleFonts.outfit(color: Colors.white70)),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("Cancel")),
+                TextButton(
+                  child:
+                      const Text("Delete", style: TextStyle(color: Colors.red)),
+                  onPressed: () {
+                    notifier.deleteMantra(mantra.id);
+                    Navigator.pop(ctx);
+                  },
+                )
+              ],
             ));
   }
 }
