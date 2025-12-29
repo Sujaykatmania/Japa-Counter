@@ -13,12 +13,13 @@ dependencies:
   shared_preferences: ^2.2.2
   google_fonts: ^6.2.1
   intl: ^0.19.0
-  glass_kit:
-    ^3.0.0 # Adding a helper for glassmorphism if needed, but I'll likely stick to BackdropFilter manually for control.
-    # Actually, let's keep it minimal. No glass_kit mostly.
-    # User asked for BackdropFilter with 10px blur.
+  # glass_kit: ^3.0.0 # Adding a helper for glassmorphism if needed
+  # But I'll likely stick to BackdropFilter manually for control.
+  # User asked for BackdropFilter with 10px blur.
 
   cupertino_icons: ^1.0.6
+  audioplayers: ^5.2.1
+  uuid: ^4.3.3
 
 dev_dependencies:
   flutter_test:
@@ -27,3 +28,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/sounds/

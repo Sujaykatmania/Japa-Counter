@@ -33,18 +33,45 @@ class SettingsScreen extends ConsumerWidget {
             value: counterState.isZenMode,
             onChanged: (val) => notifier.toggleZenMode(),
           ),
-          
+          const SizedBox(height: 30),
+          _SectionHeader(title: "Feedback"),
+          _SettingsTile(
+            title: "Haptic Feedback",
+            subtitle: "Vibrate on count",
+            value: counterState.isHapticsEnabled,
+            onChanged: (val) => notifier.toggleHaptics(),
+          ),
+          _SettingsTile(
+            title: "Sound Effects",
+            subtitle: "Click sound on count",
+            value: counterState.isSoundEnabled,
+            onChanged: (val) => notifier.toggleSound(),
+          ),
           const SizedBox(height: 30),
           _SectionHeader(title: "Goal"),
           ListTile(
-            title: Text("Target Count", style: GoogleFonts.outfit(color: Colors.white)),
+            title: Text("Target Count",
+                style: GoogleFonts.outfit(color: Colors.white)),
             trailing: Text(
-              "${counterState.goal}",
-              style: GoogleFonts.outfit(color: const Color(0xFFFFD700), fontSize: 24, fontWeight: FontWeight.bold),
+              "${counterState.activeMantra?.goal ?? 108}",
+              style: GoogleFonts.outfit(
+                  color: const Color(0xFFFFD700),
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold),
             ),
-            onTap: () => _showGoalDialog(context, notifier, counterState.goal),
+            onTap: () => _showGoalDialog(
+                context, notifier, counterState.activeMantra?.goal ?? 108),
           ),
-          
+          const SizedBox(height: 30),
+          _SectionHeader(title: "Stats"),
+          ListTile(
+            title: Text("Lifetime Japas",
+                style: GoogleFonts.outfit(color: Colors.white)),
+            trailing: Text(
+              "${counterState.totalLifetimeCount}",
+              style: GoogleFonts.outfit(color: Colors.white, fontSize: 18),
+            ),
+          ),
           const SizedBox(height: 30),
           _SectionHeader(title: "History"),
           if (counterState.history.isEmpty)
@@ -55,68 +82,72 @@ class SettingsScreen extends ConsumerWidget {
                 style: GoogleFonts.outfit(color: Colors.white54),
               ),
             ),
-          ...counterState.history.reversed.map((entry) { // Show newest first
-             return ListTile(
-               title: Text(
-                 entry['date'] as String,
-                 style: GoogleFonts.outfit(color: Colors.white70),
-               ),
-               trailing: Text(
-                 "${entry['count']}",
-                 style: GoogleFonts.outfit(color: Colors.white, fontWeight: FontWeight.bold),
-               ),
-             );
+          ...counterState.history.reversed.map((entry) {
+            // Show newest first
+            return ListTile(
+              title: Text(
+                entry['date'] as String,
+                style: GoogleFonts.outfit(color: Colors.white70),
+              ),
+              trailing: Text(
+                "${entry['count']}",
+                style: GoogleFonts.outfit(
+                    color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+            );
           }).toList(),
-          
           const SizedBox(height: 50),
           Center(
-             child: TextButton(
-               onPressed: () {
-                 // Danger zone? Just reset count? 
-                 // HomeScreen has a reset button. 
-                 // Maybe "Clear History"? Not required yet.
-               },
-               child: Text("Japa Counter v1.0", style: GoogleFonts.outfit(color: Colors.white24)),
-             ),
+            child: TextButton(
+              onPressed: () {
+                // Danger zone? Just reset count?
+                // HomeScreen has a reset button.
+                // Maybe "Clear History"? Not required yet.
+              },
+              child: Text("Japa Counter v1.0",
+                  style: GoogleFonts.outfit(color: Colors.white24)),
+            ),
           )
         ],
       ),
     );
   }
 
-  void _showGoalDialog(BuildContext context, CounterNotifier notifier, int currentGoal) {
+  void _showGoalDialog(
+      BuildContext context, CounterNotifier notifier, int currentGoal) {
     final controller = TextEditingController(text: "$currentGoal");
     showDialog(
-      context: context, 
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF2C2C2C),
-        title: Text("Set Goal", style: GoogleFonts.outfit(color: Colors.white)),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          style: GoogleFonts.outfit(color: Colors.white),
-          decoration: const InputDecoration(
-            enabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.white24)),
-          ),
-        ),
-        actions: [
-          TextButton(
-            child: const Text("Cancel"),
-            onPressed: () => Navigator.pop(ctx),
-          ),
-          TextButton(
-            child: const Text("Save"),
-            onPressed: () {
-               final val = int.tryParse(controller.text);
-               if (val != null && val > 0) {
-                 notifier.setGoal(val);
-               }
-               Navigator.pop(ctx);
-            },
-          ),
-        ],
-      )
-    );
+        context: context,
+        builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF2C2C2C),
+              title: Text("Set Goal",
+                  style: GoogleFonts.outfit(color: Colors.white)),
+              content: TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                style: GoogleFonts.outfit(color: Colors.white),
+                decoration: const InputDecoration(
+                  enabledBorder: UnderlineInputBorder(
+                      borderSide: BorderSide(color: Colors.white24)),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  child: const Text("Cancel"),
+                  onPressed: () => Navigator.pop(ctx),
+                ),
+                TextButton(
+                  child: const Text("Save"),
+                  onPressed: () {
+                    final val = int.tryParse(controller.text);
+                    if (val != null && val > 0) {
+                      notifier.setGoal(val);
+                    }
+                    Navigator.pop(ctx);
+                  },
+                ),
+              ],
+            ));
   }
 }
 
@@ -158,8 +189,9 @@ class _SettingsTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return SwitchListTile(
       title: Text(title, style: GoogleFonts.outfit(color: Colors.white)),
-      subtitle: Text(subtitle, style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
-      value: value, 
+      subtitle: Text(subtitle,
+          style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
+      value: value,
       onChanged: onChanged,
       activeColor: const Color(0xFFFFD700),
       contentPadding: EdgeInsets.zero,

@@ -1,10 +1,13 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:japa_counter/models/mantra.dart';
 import 'package:japa_counter/providers/counter_provider.dart';
-import 'package:japa_counter/screens/settings_screen.dart'; // We will create this next
+import 'package:japa_counter/screens/settings_screen.dart';
 import 'package:japa_counter/widgets/circular_progress.dart';
+import 'package:japa_counter/widgets/ripple_background.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -12,161 +15,463 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final counterState = ref.watch(counterProvider);
-    final isZen = counterState.isZenMode;
+    final notifier = ref.read(counterProvider.notifier);
+    final activeMantra = counterState.activeMantra;
+
+    // Loading or Error State
+    if (activeMantra == null) {
+      return const Scaffold(
+        backgroundColor: Color(0xFF121212),
+        body:
+            Center(child: CircularProgressIndicator(color: Color(0xFFFFD700))),
+      );
+    }
+
+    final mantraColor = Color(activeMantra.color);
+
+    // Progress calculation
+    final double progress = activeMantra.goal == 0
+        ? 0
+        : (activeMantra.count % activeMantra.goal) / activeMantra.goal;
 
     return Scaffold(
-      // Allow content to go behind status/nav bars if Zen
       extendBodyBehindAppBar: true,
       extendBody: true,
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          // Background Gradient (Subtle)
-          Container(
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Color(0xFF1E1E1E),
-                  Color(0xFF121212),
-                ],
-              ),
-            ),
-          ),
-          
-          // Main Interactive Area
-          if (!counterState.isTactileMode) 
-            // Focus Mode: Full screen tap
-            Positioned.fill(
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => ref.read(counterProvider.notifier).increment(),
-                child: Container(color: Colors.transparent),
-              ),
-            ),
-
-          // Central Counting UI
-          Center(
-            child: SizedBox(
-              width: 300,
-              height: 300,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                   // Progress Ring
-                   RepaintBoundary(
-                     child: CustomPaint(
-                       size: const Size(300, 300),
-                       painter: CircularProgressPainter(
-                         progress: counterState.progress,
-                         color: const Color(0xFFFFD700), // Gold
-                         glowColor: const Color(0xFFFFD700).withOpacity(0.6),
-                       ),
-                     ),
-                   ),
-
-                   // Glassmorphism Center Circle (Tactile Button Area)
-                   if (counterState.isTactileMode)
-                     GestureDetector(
-                       onTap: () => ref.read(counterProvider.notifier).increment(),
-                       child: ClipOval(
-                         child: BackdropFilter(
-                           filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                           child: Container(
-                             width: 240,
-                             height: 240,
-                             decoration: BoxDecoration(
-                               color: Colors.white.withOpacity(0.05),
-                               shape: BoxShape.circle,
-                               border: Border.all(
-                                 color: Colors.white.withOpacity(0.1),
-                                 width: 1,
-                               ),
-                               boxShadow: [
-                                 BoxShadow(
-                                   color: Colors.black.withOpacity(0.2),
-                                   blurRadius: 20,
-                                   spreadRadius: 5,
-                                 )
-                               ]
-                             ),
-                             alignment: Alignment.center,
-                           ),
-                         ),
-                       ),
-                     ),
-
-                    // Counter Text (with Pulse trigger key)
-                    // We can use a simple scaling animation on change
-                    _PulseText(
-                      count: counterState.count,
-                      key: ValueKey(counterState.count),
-                    ),
-                ],
-              ),
-            ),
-          ),
-
-          // Settings Button (Top Right)
-          // Hide in Zen Mode? Maybe make it very subtle or require specific gesture.
-          // User said "Zen Mode toggles System UI". Maybe we keep the Settings button but make it low contrast.
-          Positioned(
-            top: 50,
-            right: 20,
-            child: IconButton(
-              icon: Icon(Icons.settings, color: Colors.white.withOpacity(0.3)),
-              onPressed: () {
-                 Navigator.push(
-                   context, 
-                   MaterialPageRoute(builder: (_) => const SettingsScreen())
-                 );
-              },
-            ),
-          ),
-          
-          // Reset Button (Tactile Mode Only - Small secondary button)
-          if (counterState.isTactileMode)
+      backgroundColor: const Color(0xFF121212), // Deep Charcoal Fallback
+      body: RippleBackground(
+        rippleColor: mantraColor,
+        onTap: () {
+          if (!counterState.isTactileMode) notifier.increment();
+        },
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Safe Area for Top Bar
             Positioned(
-              bottom: 100,
-              child: TextButton(
-                onPressed: () => ref.read(counterProvider.notifier).reset(),
-                child: Text(
-                  "RESET", 
-                  style: GoogleFonts.outfit(
-                    color: Colors.white.withOpacity(0.3),
-                    letterSpacing: 2,
-                  )
+              top: 50,
+              left: 20,
+              right: 20,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  // Streak Badge
+                  _StreakBadge(streak: counterState.currentStreak),
+
+                  // Mantra Selector
+                  Expanded(
+                    child: Center(
+                      child: _MantraSelector(
+                        activeMantra: activeMantra,
+                        mantras: counterState.mantras,
+                        onSelect: (id) => notifier.selectMantra(id),
+                        onAdd: () => _showAddMantraDialog(context, notifier),
+                      ),
+                    ),
+                  ),
+
+                  // Settings
+                  IconButton(
+                    icon: Icon(Icons.settings,
+                        color: Colors.white.withOpacity(0.5)),
+                    onPressed: () {
+                      Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const SettingsScreen()));
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Central Counting UI
+            Center(
+              child: SizedBox(
+                width: 300,
+                height: 300,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    // Progress Ring
+                    RepaintBoundary(
+                      child: CustomPaint(
+                        size: const Size(300, 300),
+                        painter: CircularProgressPainter(
+                          progress: progress,
+                          color: mantraColor,
+                          glowColor: mantraColor.withOpacity(0.5),
+                          trackColor: Colors.white.withOpacity(0.05),
+                        ),
+                      ),
+                    ),
+
+                    // Tactile Button Area
+                    if (counterState.isTactileMode)
+                      GestureDetector(
+                        onTap: () => notifier.increment(),
+                        child: ClipOval(
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                            child: Container(
+                              width: 240,
+                              height: 240,
+                              decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Colors.white.withOpacity(0.1),
+                                    width: 1,
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 30,
+                                      spreadRadius: 5,
+                                    )
+                                  ]),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                    // Counter Text & Mala
+                    IgnorePointer(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            "MALA: ${activeMantra.malaCount}",
+                            style: GoogleFonts.outfit(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.5),
+                          ),
+                          const SizedBox(height: 10),
+                          _PulseText(
+                            count: activeMantra.count,
+                            key: ValueKey(activeMantra.count),
+                            color: Colors.white,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
-            
-          // Goal Indicator (Bottom center)
-          Positioned(
-            bottom: 60,
-            child: Text(
-              "Goal: ${counterState.goal}",
-              style: GoogleFonts.outfit(
-                color: Colors.white.withOpacity(0.3),
-                fontSize: 14,
+
+            // Reset Button (Bottom)
+            if (counterState.isTactileMode)
+              Positioned(
+                bottom: 100,
+                left: 0,
+                right: 0,
+                child: Center(
+                  child: GestureDetector(
+                    onLongPress: () =>
+                        _showResetOptions(context, notifier, activeMantra.id),
+                    onTap: () {
+                      HapticFeedback.lightImpact();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text(
+                            "Hold to Reset",
+                            style: GoogleFonts.outfit(color: Colors.black),
+                            textAlign: TextAlign.center,
+                          ),
+                          backgroundColor: mantraColor,
+                          duration: const Duration(seconds: 1),
+                          behavior: SnackBarBehavior.floating,
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20)),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 24, vertical: 12),
+                      decoration: BoxDecoration(
+                        border: Border.all(color: mantraColor.withOpacity(0.3)),
+                        borderRadius: BorderRadius.circular(30),
+                        color: Colors.black.withOpacity(0.2),
+                      ),
+                      child: Text(
+                        "HOLD TO RESET",
+                        style: GoogleFonts.outfit(
+                          color: mantraColor,
+                          letterSpacing: 1.5,
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+            // Goal Text
+            Positioned(
+              bottom: 60,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Text(
+                  "Goal: ${activeMantra.goal}",
+                  style: GoogleFonts.outfit(
+                    color: Colors.white.withOpacity(0.3),
+                    fontSize: 14,
+                  ),
+                ),
               ),
             ),
-          ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showAddMantraDialog(BuildContext context, CounterNotifier notifier) {
+    final nameController = TextEditingController();
+    final goalController = TextEditingController(text: "108");
+
+    showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+              backgroundColor: const Color(0xFF2C2C2C),
+              title: Text("New Mantra",
+                  style: GoogleFonts.outfit(color: Colors.white)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    style: GoogleFonts.outfit(color: Colors.white),
+                    decoration: const InputDecoration(
+                        labelText: "Mantra Name",
+                        labelStyle: TextStyle(color: Colors.white54)),
+                  ),
+                  TextField(
+                    controller: goalController,
+                    keyboardType: TextInputType.number,
+                    style: GoogleFonts.outfit(color: Colors.white),
+                    decoration: const InputDecoration(
+                        labelText: "Goal (e.g. 108)",
+                        labelStyle: TextStyle(color: Colors.white54)),
+                  ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: const Text("Cancel")),
+                TextButton(
+                  child: const Text("Create"),
+                  onPressed: () {
+                    final goal = int.tryParse(goalController.text) ?? 108;
+                    if (nameController.text.isNotEmpty) {
+                      notifier.addMantra(nameController.text, goal);
+                      Navigator.pop(ctx);
+                    }
+                  },
+                )
+              ],
+            ));
+  }
+
+  void _showResetOptions(
+      BuildContext context, CounterNotifier notifier, String mantraId) {
+    showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFF1E1E1E),
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (ctx) => Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text("Reset Options",
+                      style: GoogleFonts.outfit(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    leading:
+                        const Icon(Icons.refresh, color: Colors.orangeAccent),
+                    title: Text("Reset Current Count",
+                        style: GoogleFonts.outfit(color: Colors.white)),
+                    subtitle: Text("Sets count to 0, keeps Mala count",
+                        style: GoogleFonts.outfit(color: Colors.white54)),
+                    onTap: () {
+                      notifier.resetCurrentCount(mantraId);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.delete_forever,
+                        color: Colors.redAccent),
+                    title: Text("Reset Full History",
+                        style: GoogleFonts.outfit(color: Colors.white)),
+                    subtitle: Text("Sets Count AND Mala count to 0",
+                        style: GoogleFonts.outfit(color: Colors.white54)),
+                    onTap: () {
+                      notifier.resetFullHistory(mantraId);
+                      Navigator.pop(ctx);
+                    },
+                  ),
+                ],
+              ),
+            ));
+  }
+}
+
+class _StreakBadge extends StatelessWidget {
+  final int streak;
+  const _StreakBadge({required this.streak});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.local_fire_department,
+              color: Colors.orangeAccent, size: 16),
+          const SizedBox(width: 4),
+          Text("$streak",
+              style: GoogleFonts.outfit(
+                  color: Colors.white, fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 }
 
+class _MantraSelector extends StatelessWidget {
+  final Mantra activeMantra;
+  final List<Mantra> mantras;
+  final Function(String) onSelect;
+  final VoidCallback onAdd;
+
+  const _MantraSelector(
+      {required this.activeMantra,
+      required this.mantras,
+      required this.onSelect,
+      required this.onAdd});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showSelector(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.1))),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                    color: Color(activeMantra.color), shape: BoxShape.circle)),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                activeMantra.name.toUpperCase(),
+                style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.keyboard_arrow_down,
+                color: Colors.white54, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showSelector(BuildContext context) {
+    showModalBottomSheet(
+        context: context,
+        backgroundColor: const Color(0xFF1E1E1E),
+        isScrollControlled: true,
+        shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        builder: (ctx) => DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.5,
+              builder: (_, controller) => ListView(
+                controller: controller,
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Select Mantra",
+                          style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold)),
+                      IconButton(
+                          icon: const Icon(Icons.add, color: Color(0xFFFFD700)),
+                          onPressed: () {
+                            Navigator.pop(ctx);
+                            onAdd();
+                          }),
+                    ],
+                  ),
+                  const Divider(color: Colors.white10),
+                  ...mantras.map((m) => ListTile(
+                        leading: Container(
+                            width: 12,
+                            height: 12,
+                            decoration: BoxDecoration(
+                                color: Color(m.color), shape: BoxShape.circle)),
+                        title: Text(m.name,
+                            style: GoogleFonts.outfit(color: Colors.white)),
+                        subtitle: Text(
+                            "Malas: ${m.malaCount}  •  Goal: ${m.goal}",
+                            style: GoogleFonts.outfit(color: Colors.white54)),
+                        trailing: m.id == activeMantra.id
+                            ? const Icon(Icons.check, color: Color(0xFFFFD700))
+                            : null,
+                        onTap: () {
+                          onSelect(m.id);
+                          Navigator.pop(ctx);
+                        },
+                      )),
+                ],
+              ),
+            ));
+  }
+}
+
 class _PulseText extends StatefulWidget {
   final int count;
-  const _PulseText({super.key, required this.count});
+  final Color color;
+  const _PulseText({super.key, required this.count, this.color = Colors.white});
 
   @override
   State<_PulseText> createState() => _PulseTextState();
 }
 
-class _PulseTextState extends State<_PulseText> with SingleTickerProviderStateMixin {
+class _PulseTextState extends State<_PulseText>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
 
@@ -196,17 +501,16 @@ class _PulseTextState extends State<_PulseText> with SingleTickerProviderStateMi
       child: Text(
         "${widget.count}",
         style: GoogleFonts.outfit(
-          fontSize: 64,
-          fontWeight: FontWeight.bold,
-          color: Colors.white,
-          shadows: [
-             Shadow(
-               blurRadius: 20,
-               color: const Color(0xFFFFD700).withOpacity(0.4),
-               offset: const Offset(0, 0),
-             ),
-          ]
-        ),
+            fontSize: 64,
+            fontWeight: FontWeight.bold,
+            color: widget.color,
+            shadows: [
+              Shadow(
+                blurRadius: 20,
+                color: widget.color.withOpacity(0.4),
+                offset: const Offset(0, 0),
+              ),
+            ]),
       ),
     );
   }

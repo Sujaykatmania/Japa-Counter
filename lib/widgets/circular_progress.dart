@@ -5,11 +5,13 @@ class CircularProgressPainter extends CustomPainter {
   final double progress; // 0.0 to 1.0
   final Color color;
   final Color glowColor;
+  final Color? trackColor;
 
   CircularProgressPainter({
     required this.progress,
     required this.color,
     required this.glowColor,
+    this.trackColor,
   });
 
   @override
@@ -20,7 +22,7 @@ class CircularProgressPainter extends CustomPainter {
 
     // Background Circle
     final bgPaint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = trackColor ?? Colors.white.withOpacity(0.05)
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -53,7 +55,7 @@ class CircularProgressPainter extends CustomPainter {
       false,
       glowPaint,
     );
-    
+
     canvas.drawArc(
       Rect.fromCircle(center: center, radius: radius),
       -pi / 2,
@@ -67,6 +69,7 @@ class CircularProgressPainter extends CustomPainter {
   bool shouldRepaint(covariant CircularProgressPainter oldDelegate) {
     return oldDelegate.progress != progress ||
         oldDelegate.color != color ||
-        oldDelegate.glowColor != glowColor; 
+        oldDelegate.trackColor != trackColor ||
+        oldDelegate.glowColor != glowColor;
   }
 }

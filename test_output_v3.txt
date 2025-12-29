@@ -1,0 +1,14 @@
+﻿00:00 +0: loading C:/Users/sskka/Downloads/Projects/Japa Counter/test/widget_test.dart
+00:00 +0 -1: loading C:/Users/sskka/Downloads/Projects/Japa Counter/test/widget_test.dart [E]
+  Failed to load "C:/Users/sskka/Downloads/Projects/Japa Counter/test/widget_test.dart":
+  Compilation failed for testPath=C:/Users/sskka/Downloads/Projects/Japa Counter/test/widget_test.dart: test/widget_test.dart:31:56: Error: Method not found: 'MyApp'.
+      await tester.pumpWidget(const ProviderScope(child: MyApp()));
+                                                         ^^^^^
+  test/widget_test.dart:47:56: Error: Method not found: 'MyApp'.
+      await tester.pumpWidget(const ProviderScope(child: MyApp()));
+                                                         ^^^^^
+  test/widget_test.dart:66:56: Error: Method not found: 'MyApp'.
+      await tester.pumpWidget(const ProviderScope(child: MyApp()));
+                                                         ^^^^^
+  .
+00:00 +0 -1: Some tests failed.
