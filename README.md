@@ -58,10 +58,6 @@ A premium, minimalist digital counter designed for spiritual practices. Built wi
    flutter run
    ```
 
-## Screenshots
-
-> _Add screenshots of Home Screen, Mantra Selector, and Settings here._
-
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
