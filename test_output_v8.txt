@@ -1,0 +1,5 @@
+﻿00:00 +0: loading C:/Users/sskka/Downloads/Projects/Japa Counter/test/widget_test.dart
+00:00 +0: Japa Counter V3 Initial State Test
+00:00 +1: Increment and Goal Reset Test
+00:01 +2: Switching Modes Test
+00:01 +3: All tests passed!

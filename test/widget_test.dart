@@ -78,11 +78,15 @@ void main() {
     await tester.pageBack();
     await tester.pumpAndSettle();
 
-    // Now in Focus Mode, tapping anywhere should increment
-    await tester.tapAt(const Offset(100, 100)); // Tap top left
+    // Now in Focus Mode, tapping anywhere in the body should increment.
+    // The Header is height 120. So we must tap below y=120.
+    await tester.tapAt(const Offset(100, 300)); // Tap well below header
     await tester.pump();
 
     // Count is 1 (Streak 1, Count 1)
     expect(find.text('1'), findsNWidgets(2));
+
+    // Check that Reset Button STAYS VISIBLE even in Focus Mode (New Requirement)
+    expect(find.text('HOLD TO RESET'), findsOneWidget);
   });
 }

@@ -11,6 +11,11 @@ class SettingsScreen extends ConsumerWidget {
     final counterState = ref.watch(counterProvider);
     final notifier = ref.read(counterProvider.notifier);
 
+    // Dynamic Theme Color (Default to Gold if none)
+    final themeColor = counterState.activeMantra != null
+        ? Color(counterState.activeMantra!.color)
+        : const Color(0xFFFFD700);
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Settings", style: GoogleFonts.outfit()),
@@ -20,50 +25,52 @@ class SettingsScreen extends ConsumerWidget {
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          _SectionHeader(title: "Preferences"),
+          _SectionHeader(title: "Preferences", color: themeColor),
           _SettingsTile(
             title: "Tactile Mode",
             subtitle: "Button interface vs Full screen tap",
             value: counterState.isTactileMode,
             onChanged: (val) => notifier.toggleMode(),
+            activeColor: themeColor,
           ),
           _SettingsTile(
             title: "Zen Mode",
             subtitle: "Hide system status bars",
             value: counterState.isZenMode,
             onChanged: (val) => notifier.toggleZenMode(),
+            activeColor: themeColor,
           ),
           const SizedBox(height: 30),
-          _SectionHeader(title: "Feedback"),
+          _SectionHeader(title: "Feedback", color: themeColor),
           _SettingsTile(
             title: "Haptic Feedback",
             subtitle: "Vibrate on count",
             value: counterState.isHapticsEnabled,
             onChanged: (val) => notifier.toggleHaptics(),
+            activeColor: themeColor,
           ),
           _SettingsTile(
             title: "Sound Effects",
             subtitle: "Click sound on count",
             value: counterState.isSoundEnabled,
             onChanged: (val) => notifier.toggleSound(),
+            activeColor: themeColor,
           ),
           const SizedBox(height: 30),
-          _SectionHeader(title: "Goal"),
+          _SectionHeader(title: "Goal", color: themeColor),
           ListTile(
             title: Text("Target Count",
                 style: GoogleFonts.outfit(color: Colors.white)),
             trailing: Text(
               "${counterState.activeMantra?.goal ?? 108}",
               style: GoogleFonts.outfit(
-                  color: const Color(0xFFFFD700),
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold),
+                  color: themeColor, fontSize: 24, fontWeight: FontWeight.bold),
             ),
             onTap: () => _showGoalDialog(
                 context, notifier, counterState.activeMantra?.goal ?? 108),
           ),
           const SizedBox(height: 30),
-          _SectionHeader(title: "Stats"),
+          _SectionHeader(title: "Stats", color: themeColor),
           ListTile(
             title: Text("Lifetime Japas",
                 style: GoogleFonts.outfit(color: Colors.white)),
@@ -73,7 +80,7 @@ class SettingsScreen extends ConsumerWidget {
             ),
           ),
           const SizedBox(height: 30),
-          _SectionHeader(title: "History"),
+          _SectionHeader(title: "History", color: themeColor),
           if (counterState.history.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: 20),
@@ -100,11 +107,9 @@ class SettingsScreen extends ConsumerWidget {
           Center(
             child: TextButton(
               onPressed: () {
-                // Danger zone? Just reset count?
-                // HomeScreen has a reset button.
-                // Maybe "Clear History"? Not required yet.
+                // Danger zone
               },
-              child: Text("Japa Counter v1.0",
+              child: Text("Japa Counter v3.0",
                   style: GoogleFonts.outfit(color: Colors.white24)),
             ),
           )
@@ -153,7 +158,8 @@ class SettingsScreen extends ConsumerWidget {
 
 class _SectionHeader extends StatelessWidget {
   final String title;
-  const _SectionHeader({required this.title});
+  final Color color;
+  const _SectionHeader({required this.title, required this.color});
 
   @override
   Widget build(BuildContext context) {
@@ -162,7 +168,7 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         title.toUpperCase(),
         style: GoogleFonts.outfit(
-          color: const Color(0xFFFFD700),
+          color: color,
           letterSpacing: 1.5,
           fontWeight: FontWeight.bold,
           fontSize: 12,
@@ -177,12 +183,14 @@ class _SettingsTile extends StatelessWidget {
   final String subtitle;
   final bool value;
   final ValueChanged<bool> onChanged;
+  final Color activeColor;
 
   const _SettingsTile({
     required this.title,
     required this.subtitle,
     required this.value,
     required this.onChanged,
+    required this.activeColor,
   });
 
   @override
@@ -193,7 +201,7 @@ class _SettingsTile extends StatelessWidget {
           style: GoogleFonts.outfit(color: Colors.white54, fontSize: 12)),
       value: value,
       onChanged: onChanged,
-      activeColor: const Color(0xFFFFD700),
+      activeColor: activeColor,
       contentPadding: EdgeInsets.zero,
     );
   }

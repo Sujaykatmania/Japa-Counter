@@ -9,21 +9,28 @@ import 'package:japa_counter/screens/settings_screen.dart';
 import 'package:japa_counter/widgets/circular_progress.dart';
 import 'package:japa_counter/widgets/ripple_background.dart';
 
-class HomeScreen extends ConsumerWidget {
+class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends ConsumerState<HomeScreen> {
+  // Global Key to persist the Ripple Widget state across rebuilds
+  final GlobalKey<RippleBackgroundState> rippleKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
     final counterState = ref.watch(counterProvider);
     final notifier = ref.read(counterProvider.notifier);
     final activeMantra = counterState.activeMantra;
 
-    // Loading or Error State
+    // Loading State
     if (activeMantra == null) {
       return const Scaffold(
         backgroundColor: Color(0xFF121212),
-        body:
-            Center(child: CircularProgressIndicator(color: Color(0xFFFFD700))),
+        body: Center(child: CircularProgressIndicator(color: Color(0xFFFFD700))),
       );
     }
 
@@ -36,56 +43,43 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       extendBodyBehindAppBar: true,
-      extendBody: true,
-      backgroundColor: const Color(0xFF121212), // Deep Charcoal Fallback
-      body: RippleBackground(
-        rippleColor: mantraColor,
-        onTap: () {
-          if (!counterState.isTactileMode) notifier.increment();
-        },
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            // Safe Area for Top Bar
-            Positioned(
-              top: 50,
-              left: 20,
-              right: 20,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  // Streak Badge
-                  _StreakBadge(streak: counterState.currentStreak),
-
-                  // Mantra Selector
-                  Expanded(
-                    child: Center(
-                      child: _MantraSelector(
-                        activeMantra: activeMantra,
-                        mantras: counterState.mantras,
-                        onSelect: (id) => notifier.selectMantra(id),
-                        onAdd: () => _showAddMantraDialog(context, notifier),
-                      ),
-                    ),
-                  ),
-
-                  // Settings
-                  IconButton(
-                    icon: Icon(Icons.settings,
-                        color: Colors.white.withOpacity(0.5)),
-                    onPressed: () {
-                      Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (_) => const SettingsScreen()));
-                    },
-                  ),
-                ],
+      backgroundColor: const Color(0xFF121212),
+      // -----------------------------------------------------------
+      // ROOT LAYOUT: Stack (Restored to fix layout shifts)
+      // -----------------------------------------------------------
+      body: Stack(
+        fit: StackFit.expand,
+        children: [
+          // ------------------------------------------------
+          // LAYER 1: Background Visuals & Focus Mode Detector
+          // ------------------------------------------------
+          RippleBackground(
+            key: rippleKey,
+            rippleColor: mantraColor,
+            child: Container(color: Colors.transparent),
+          ),
+          
+          // The Tap Detector covers the WHOLE screen
+          // Only active in Focus Mode (Non-Tactile)
+          if (!counterState.isTactileMode)
+            Positioned.fill(
+              child: GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTapDown: (details) {
+                  notifier.increment();
+                  rippleKey.currentState?.addRipple(details.globalPosition);
+                },
+                child: Container(color: Colors.transparent),
               ),
             ),
 
-            // Central Counting UI
-            Center(
+          // ------------------------------------------------
+          // LAYER 2: Central Counter (Centered on Screen)
+          // ------------------------------------------------
+          // Wrapped in IgnorePointer so Focus Mode taps pass through it
+          IgnorePointer(
+            ignoring: !counterState.isTactileMode, 
+            child: Center(
               child: SizedBox(
                 width: 300,
                 height: 300,
@@ -105,10 +99,13 @@ class HomeScreen extends ConsumerWidget {
                       ),
                     ),
 
-                    // Tactile Button Area
+                    // Tactile Button Area (Only if active)
                     if (counterState.isTactileMode)
                       GestureDetector(
-                        onTap: () => notifier.increment(),
+                        onTapDown: (details) {
+                          notifier.increment();
+                          rippleKey.currentState?.addRipple(details.globalPosition);
+                        },
                         child: ClipOval(
                           child: BackdropFilter(
                             filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
@@ -116,25 +113,18 @@ class HomeScreen extends ConsumerWidget {
                               width: 240,
                               height: 240,
                               decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.05),
-                                  shape: BoxShape.circle,
-                                  border: Border.all(
-                                    color: Colors.white.withOpacity(0.1),
-                                    width: 1,
-                                  ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.3),
-                                      blurRadius: 30,
-                                      spreadRadius: 5,
-                                    )
-                                  ]),
+                                color: Colors.white.withOpacity(0.05),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withOpacity(0.1),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
 
-                    // Counter Text & Mala
+                    // Counter Text & Mala Info
                     IgnorePointer(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
@@ -161,73 +151,116 @@ class HomeScreen extends ConsumerWidget {
                 ),
               ),
             ),
+          ),
 
-            // Reset Button (Bottom)
-            if (counterState.isTactileMode)
-              Positioned(
-                bottom: 100,
-                left: 0,
-                right: 0,
-                child: Center(
-                  child: GestureDetector(
-                    onLongPress: () =>
-                        _showResetOptions(context, notifier, activeMantra.id),
-                    onTap: () {
-                      HapticFeedback.lightImpact();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text(
-                            "Hold to Reset",
-                            style: GoogleFonts.outfit(color: Colors.black),
-                            textAlign: TextAlign.center,
-                          ),
-                          backgroundColor: mantraColor,
-                          duration: const Duration(seconds: 1),
-                          behavior: SnackBarBehavior.floating,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20)),
-                        ),
-                      );
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 24, vertical: 12),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: mantraColor.withOpacity(0.3)),
-                        borderRadius: BorderRadius.circular(30),
-                        color: Colors.black.withOpacity(0.2),
-                      ),
-                      child: Text(
-                        "HOLD TO RESET",
-                        style: GoogleFonts.outfit(
-                          color: mantraColor,
-                          letterSpacing: 1.5,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-
-            // Goal Text
-            Positioned(
-              bottom: 60,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Text(
+          // ------------------------------------------------
+          // LAYER 3: Bottom Elements (Reset & Goal)
+          // ------------------------------------------------
+          // Pinned to bottom to avoid overlapping the center ring
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
                   "Goal: ${activeMantra.goal}",
                   style: GoogleFonts.outfit(
                     color: Colors.white.withOpacity(0.3),
                     fontSize: 14,
                   ),
                 ),
+                const SizedBox(height: 20),
+                GestureDetector(
+                  onLongPress: () =>
+                      _showResetOptions(context, notifier, activeMantra.id),
+                  onTap: () {
+                    HapticFeedback.lightImpact();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text("Hold to Reset",
+                            style: GoogleFonts.outfit(color: Colors.black)),
+                        backgroundColor: mantraColor,
+                        duration: const Duration(seconds: 1),
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20)),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    decoration: BoxDecoration(
+                      border: Border.all(color: mantraColor.withOpacity(0.3)),
+                      borderRadius: BorderRadius.circular(30),
+                      color: Colors.black.withOpacity(0.2),
+                    ),
+                    child: Text(
+                      "HOLD TO RESET",
+                      style: GoogleFonts.outfit(
+                        color: mantraColor,
+                        letterSpacing: 1.5,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ------------------------------------------------
+          // LAYER 4: Header (Settings & Streak)
+          // ------------------------------------------------
+          // This sits ON TOP. The GestureDetector ensures tapping empty space
+          // in the header does NOT trigger the counter below.
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: GestureDetector(
+              onTap: () {
+                 // Block taps here from falling through to the counter
+              },
+              behavior: HitTestBehavior.opaque, 
+              child: SafeArea(
+                child: Container(
+                  height: 80,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _StreakBadge(streak: counterState.currentStreak),
+                      Expanded(
+                        child: Center(
+                          child: _MantraSelector(
+                            activeMantra: activeMantra,
+                            mantras: counterState.mantras,
+                            onSelect: (id) => notifier.selectMantra(id),
+                            onAdd: () => _showAddMantraDialog(context, notifier),
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.settings,
+                            color: Colors.white.withOpacity(0.5)),
+                        onPressed: () {
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => const SettingsScreen()));
+                        },
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -328,6 +361,10 @@ class HomeScreen extends ConsumerWidget {
             ));
   }
 }
+
+// ----------------------------------------------------------
+// HELPER CLASSES (Badge, Selector, Pulse Text)
+// ----------------------------------------------------------
 
 class _StreakBadge extends StatelessWidget {
   final int streak;
