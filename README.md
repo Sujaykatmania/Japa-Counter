@@ -1,6 +1,6 @@
 # Japa Counter
 
-A premium, minimalist digital counter designed for spiritual practices. Built with Flutter, this app offers a serene, distraction-free environment for chanting mantras with advanced haptic feedback and OLED-friendly visuals.
+A premium, minimalist digital counter designed for spiritual practices. Built with Flutter, this app offers a serene, environment for chanting mantras with advanced haptic feedback and OLED-friendly visuals.
 
 ##  Features
 
