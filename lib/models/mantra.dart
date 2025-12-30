@@ -5,6 +5,9 @@ class Mantra {
   final int malaCount;
   final int goal;
   final int color; // Store as int (0xAARRGGBB)
+  final String? backgroundPath; // Path to local image file
+  final double overlayOpacity; // 0.0 to 1.0 (Darkness layer)
+  final String? chantText; // The text to display (e.g., "Om Namah Shivaya")
 
   const Mantra({
     required this.id,
@@ -13,6 +16,9 @@ class Mantra {
     this.malaCount = 0,
     this.goal = 108,
     required this.color,
+    this.backgroundPath,
+    this.overlayOpacity = 0.5,
+    this.chantText,
   });
 
   Mantra copyWith({
@@ -21,6 +27,9 @@ class Mantra {
     int? malaCount,
     int? goal,
     int? color,
+    String? backgroundPath,
+    double? overlayOpacity,
+    String? chantText,
   }) {
     return Mantra(
       id: id,
@@ -29,6 +38,9 @@ class Mantra {
       malaCount: malaCount ?? this.malaCount,
       goal: goal ?? this.goal,
       color: color ?? this.color,
+      backgroundPath: backgroundPath ?? this.backgroundPath,
+      overlayOpacity: overlayOpacity ?? this.overlayOpacity,
+      chantText: chantText ?? this.chantText,
     );
   }
 
@@ -40,6 +52,9 @@ class Mantra {
       'malaCount': malaCount,
       'goal': goal,
       'color': color,
+      'backgroundPath': backgroundPath,
+      'overlayOpacity': overlayOpacity,
+      'chantText': chantText,
     };
   }
 
@@ -51,6 +66,9 @@ class Mantra {
       malaCount: json['malaCount'] as int,
       goal: json['goal'] as int,
       color: json['color'] as int,
+      backgroundPath: json['backgroundPath'] as String?,
+      overlayOpacity: (json['overlayOpacity'] as num?)?.toDouble() ?? 0.5,
+      chantText: json['chantText'] as String?,
     );
   }
 }

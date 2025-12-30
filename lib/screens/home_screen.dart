@@ -1,8 +1,12 @@
+import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart' as path;
 import 'package:japa_counter/models/mantra.dart';
 import 'package:japa_counter/providers/counter_provider.dart';
 import 'package:japa_counter/screens/settings_screen.dart';
@@ -57,7 +61,21 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           RippleBackground(
             key: rippleKey,
             rippleColor: mantraColor,
-            child: Container(color: Colors.transparent),
+            child: activeMantra.backgroundPath != null
+                ? Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image.file(
+                        File(activeMantra.backgroundPath!),
+                        fit: BoxFit.cover,
+                      ),
+                      Container(
+                        color: Colors.black
+                            .withValues(alpha: activeMantra.overlayOpacity),
+                      ),
+                    ],
+                  )
+                : Container(color: Colors.transparent),
           ),
 
           // The Tap Detector covers the screen but leaves bottom safe
@@ -85,76 +103,102 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IgnorePointer(
             ignoring: !counterState.isTactileMode,
             child: Center(
-              child: SizedBox(
-                width: 300,
-                height: 300,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    // Progress Ring
-                    RepaintBoundary(
-                      child: CustomPaint(
-                        size: const Size(300, 300),
-                        painter: CircularProgressPainter(
-                          progress: progress,
-                          color: mantraColor,
-                          glowColor: mantraColor.withValues(alpha: 0.5),
-                          trackColor: Colors.white.withValues(alpha: 0.05),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 300,
+                    height: 300,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Progress Ring
+                        RepaintBoundary(
+                          child: CustomPaint(
+                            size: const Size(300, 300),
+                            painter: CircularProgressPainter(
+                              progress: progress,
+                              color: mantraColor,
+                              glowColor: mantraColor.withValues(alpha: 0.5),
+                              trackColor: Colors.white.withValues(alpha: 0.05),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
 
-                    // Tactile Button Area (Only if active)
-                    if (counterState.isTactileMode)
-                      GestureDetector(
-                        onTapDown: (details) {
-                          notifier.increment();
-                          rippleKey.currentState
-                              ?.addRipple(details.globalPosition);
-                        },
-                        child: ClipOval(
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                            child: Container(
-                              width: 240,
-                              height: 240,
-                              decoration: BoxDecoration(
-                                color: Colors.white.withValues(alpha: 0.05),
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.1),
+                        // Tactile Button Area (Only if active)
+                        if (counterState.isTactileMode)
+                          GestureDetector(
+                            onTapDown: (details) {
+                              notifier.increment();
+                              rippleKey.currentState
+                                  ?.addRipple(details.globalPosition);
+                            },
+                            child: ClipOval(
+                              child: BackdropFilter(
+                                filter:
+                                    ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                child: Container(
+                                  width: 240,
+                                  height: 240,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.05),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.1),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ),
 
-                    // Counter Text & Mala Info
-                    IgnorePointer(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            "MALA: ${activeMantra.malaCount}",
-                            style: GoogleFonts.outfit(
-                                color: Colors.white.withValues(alpha: 0.5),
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 1.5),
+                        // Counter Text & Mala Info
+                        IgnorePointer(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                "MALA: ${activeMantra.malaCount}",
+                                style: GoogleFonts.outfit(
+                                    color: Colors.white.withValues(alpha: 0.5),
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 1.5),
+                              ),
+                              const SizedBox(height: 10),
+                              _PulseText(
+                                count: activeMantra.count,
+                                key: ValueKey(activeMantra.count),
+                                color: Colors.white,
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 10),
-                          _PulseText(
-                            count: activeMantra.count,
-                            key: ValueKey(activeMantra.count),
-                            color: Colors.white,
-                          ),
-                        ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (activeMantra.chantText != null &&
+                      activeMantra.chantText!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 30),
+                      child: Text(
+                        activeMantra.chantText!,
+                        style: GoogleFonts.cinzel(
+                          color: Colors.white.withValues(alpha: 0.9),
+                          fontSize: 24,
+                          fontWeight: FontWeight.w500,
+                          shadows: [
+                            Shadow(
+                                color: Colors.black.withValues(alpha: 0.5),
+                                blurRadius: 10)
+                          ],
+                        ),
+                        textAlign: TextAlign.center,
                       ),
                     ),
-                  ],
-                ),
+                ],
               ),
             ),
           ),
@@ -199,8 +243,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
                     // Reset Button
                     GestureDetector(
-                      onLongPress: () =>
-                          _showResetOptions(context, notifier, activeMantra.id),
+                      onLongPress: () async {
+                        HapticFeedback.heavyImpact();
+                        await Future.delayed(const Duration(milliseconds: 150));
+                        HapticFeedback.heavyImpact();
+                        if (context.mounted) {
+                          _showResetOptions(context, notifier, activeMantra.id);
+                        }
+                      },
                       onTap: () {
                         HapticFeedback.lightImpact();
                         ScaffoldMessenger.of(context).showSnackBar(
@@ -626,52 +676,10 @@ class _MantraSelector extends StatelessWidget {
   }
 
   void _showEditDialog(BuildContext context, Mantra mantra) {
-    final nameController = TextEditingController(text: mantra.name);
-    final goalController = TextEditingController(text: mantra.goal.toString());
-
     showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-              backgroundColor: const Color(0xFF2C2C2C),
-              title: Text("Edit Mantra",
-                  style: GoogleFonts.outfit(color: Colors.white)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    style: GoogleFonts.outfit(color: Colors.white),
-                    decoration: const InputDecoration(
-                        labelText: "Mantra Name",
-                        labelStyle: TextStyle(color: Colors.white54)),
-                  ),
-                  TextField(
-                    controller: goalController,
-                    keyboardType: TextInputType.number,
-                    style: GoogleFonts.outfit(color: Colors.white),
-                    decoration: const InputDecoration(
-                        labelText: "Goal",
-                        labelStyle: TextStyle(color: Colors.white54)),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("Cancel")),
-                TextButton(
-                  child: const Text("Save"),
-                  onPressed: () {
-                    final goal = int.tryParse(goalController.text) ?? 108;
-                    if (nameController.text.isNotEmpty) {
-                      notifier.updateMantra(
-                          mantra.id, nameController.text, goal);
-                      Navigator.pop(ctx);
-                    }
-                  },
-                )
-              ],
-            ));
+      context: context,
+      builder: (ctx) => _EditMantraDialog(mantra: mantra, notifier: notifier),
+    );
   }
 
   void _showDeleteDialog(BuildContext context, Mantra mantra) {
@@ -752,6 +760,227 @@ class _PulseTextState extends State<_PulseText>
               ),
             ]),
       ),
+    );
+  }
+}
+
+class _EditMantraDialog extends StatefulWidget {
+  final Mantra mantra;
+  final CounterNotifier notifier;
+
+  const _EditMantraDialog({required this.mantra, required this.notifier});
+
+  @override
+  State<_EditMantraDialog> createState() => _EditMantraDialogState();
+}
+
+class _EditMantraDialogState extends State<_EditMantraDialog> {
+  late TextEditingController nameController;
+  late TextEditingController goalController;
+  late TextEditingController chantController;
+  String? bgPath;
+  double overlayOpacity = 0.5;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController(text: widget.mantra.name);
+    goalController = TextEditingController(text: widget.mantra.goal.toString());
+    chantController = TextEditingController(text: widget.mantra.chantText);
+    bgPath = widget.mantra.backgroundPath;
+    overlayOpacity = widget.mantra.overlayOpacity;
+  }
+
+  @override
+  void dispose() {
+    nameController.dispose();
+    goalController.dispose();
+    chantController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      // Persistence Logic: Copy to App Doc Dir
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = path.basename(image.path);
+      final savedImage =
+          await File(image.path).copy('${appDir.path}/$fileName');
+
+      setState(() {
+        bgPath = savedImage.path;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Mantra Color for slider active color
+    final mColor = Color(widget.mantra.color);
+
+    return AlertDialog(
+      backgroundColor: const Color(0xFF2C2C2C),
+      title:
+          Text("Edit Mantra", style: GoogleFonts.outfit(color: Colors.white)),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Name
+            TextField(
+              controller: nameController,
+              style: GoogleFonts.outfit(color: Colors.white),
+              decoration: const InputDecoration(
+                  labelText: "Mantra Name",
+                  labelStyle: TextStyle(color: Colors.white54)),
+            ),
+
+            // Goal
+            TextField(
+              controller: goalController,
+              keyboardType: TextInputType.number,
+              style: GoogleFonts.outfit(color: Colors.white),
+              decoration: const InputDecoration(
+                  labelText: "Goal",
+                  labelStyle: TextStyle(color: Colors.white54)),
+            ),
+
+            // Chant Text
+            TextField(
+              controller: chantController,
+              maxLines: 2,
+              style: GoogleFonts.cinzel(color: Colors.white),
+              decoration: const InputDecoration(
+                  labelText: "Chant Text / Prayer",
+                  labelStyle: TextStyle(color: Colors.white54)),
+            ),
+            const SizedBox(height: 25),
+
+            // Visuals Section Header
+            Text("Background Visuals",
+                style: GoogleFonts.outfit(
+                    color: Colors.white70,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold)),
+            const SizedBox(height: 15),
+
+            // LIVE PREVIEW Container
+            // Shows the effect of the image + opacity
+            Center(
+              child: Container(
+                width: double.infinity,
+                height: 150,
+                decoration: BoxDecoration(
+                  color: Colors.black,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.white24),
+                ),
+                clipBehavior: Clip.hardEdge,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (bgPath != null)
+                      Image.file(File(bgPath!), fit: BoxFit.cover),
+
+                    // Overlay Preview
+                    Container(
+                      color: bgPath != null
+                          ? Colors.black.withValues(alpha: overlayOpacity)
+                          : Colors
+                              .transparent, // Only show overlay if image exists
+                    ),
+
+                    // Label if empty
+                    if (bgPath == null)
+                      Center(
+                          child: Text("No Image Selected",
+                              style:
+                                  GoogleFonts.outfit(color: Colors.white24))),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.add_photo_alternate, size: 18),
+                  label: Text(bgPath == null ? "Pick" : "Change"),
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white10,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 16)),
+                ),
+                if (bgPath != null)
+                  TextButton.icon(
+                      onPressed: () => setState(() => bgPath = null),
+                      icon: const Icon(Icons.close,
+                          color: Colors.redAccent, size: 18),
+                      label: Text("Remove",
+                          style: GoogleFonts.outfit(color: Colors.redAccent)))
+              ],
+            ),
+
+            // Opacity Slider (Only if image selected)
+            if (bgPath != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text("Dimming",
+                      style: GoogleFonts.outfit(
+                          color: Colors.white54, fontSize: 12)),
+                  Text("${(overlayOpacity * 100).toInt()}%",
+                      style: GoogleFonts.outfit(
+                          color: mColor, fontWeight: FontWeight.bold)),
+                ],
+              ),
+              Slider(
+                value: overlayOpacity,
+                min: 0.0,
+                max: 1.0,
+                activeColor: mColor,
+                inactiveColor: Colors.white10,
+                onChanged: (val) {
+                  setState(() {
+                    overlayOpacity = val;
+                  });
+                },
+              ),
+            ]
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel")),
+        TextButton(
+          child: const Text("Save"),
+          onPressed: () {
+            final goal = int.tryParse(goalController.text) ?? 108;
+            if (nameController.text.isNotEmpty) {
+              widget.notifier.updateMantra(
+                widget.mantra.id,
+                name: nameController.text,
+                goal: goal,
+                backgroundPath: bgPath,
+                overlayOpacity: overlayOpacity,
+                chantText:
+                    chantController.text.isEmpty ? null : chantController.text,
+              );
+              Navigator.pop(context);
+            }
+          },
+        )
+      ],
     );
   }
 }

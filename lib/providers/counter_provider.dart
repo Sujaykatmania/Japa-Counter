@@ -250,12 +250,21 @@ class CounterNotifier extends StateNotifier<CounterState> {
     _saveState();
   }
 
-  void updateMantra(String id, String newName, int newGoal) {
-    if (newName.isEmpty) return;
-
+  void updateMantra(String id,
+      {String? name,
+      int? goal,
+      String? backgroundPath,
+      double? overlayOpacity,
+      String? chantText}) {
     final updatedList = state.mantras.map((m) {
       if (m.id == id) {
-        return m.copyWith(name: newName, goal: newGoal);
+        return m.copyWith(
+          name: name,
+          goal: goal,
+          backgroundPath: backgroundPath,
+          overlayOpacity: overlayOpacity,
+          chantText: chantText,
+        );
       }
       return m;
     }).toList();
