@@ -183,19 +183,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       activeMantra.chantText!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 30),
-                      child: Text(
-                        activeMantra.chantText!,
-                        style: GoogleFonts.cinzel(
-                          color: Colors.white.withValues(alpha: 0.9),
-                          fontSize: 24,
-                          fontWeight: FontWeight.w500,
-                          shadows: [
-                            Shadow(
-                                color: Colors.black.withValues(alpha: 0.5),
-                                blurRadius: 10)
-                          ],
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(30),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withValues(alpha: 0.4),
+                              borderRadius: BorderRadius.circular(30),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.1)),
+                            ),
+                            child: Text(
+                              activeMantra.chantText!,
+                              style: GoogleFonts.cinzel(
+                                color: Colors.white.withValues(alpha: 0.9),
+                                fontSize: 24,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
                         ),
-                        textAlign: TextAlign.center,
                       ),
                     ),
                 ],
@@ -235,7 +246,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
-                          border: Border.all(color: const Color.fromARGB(151, 255, 255, 255)),
+                          border: Border.all(
+                              color: const Color.fromARGB(151, 255, 255, 255)),
                         ),
                         child: const Icon(Icons.remove, color: Colors.white),
                       ),
