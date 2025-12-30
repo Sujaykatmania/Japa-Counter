@@ -40,6 +40,13 @@ class SettingsScreen extends ConsumerWidget {
             onChanged: (val) => notifier.toggleZenMode(),
             activeColor: themeColor,
           ),
+          _SettingsTile(
+            title: "Auto-Stop on Mala",
+            subtitle: "Pause counting when goal is reached",
+            value: counterState.autoStopOnMala,
+            onChanged: (val) => notifier.toggleAutoStop(),
+            activeColor: themeColor,
+          ),
           const SizedBox(height: 30),
           _SectionHeader(title: "Feedback", color: themeColor),
           _SettingsTile(

@@ -60,10 +60,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             child: Container(color: Colors.transparent),
           ),
 
-          // The Tap Detector covers the WHOLE screen
+          // The Tap Detector covers the screen but leaves bottom safe
           // Only active in Focus Mode (Non-Tactile)
           if (!counterState.isTactileMode)
-            Positioned.fill(
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 50, // Safe Zone for Navigation Home Bar
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTapDown: (details) {
@@ -156,7 +160,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
 
           // ------------------------------------------------
-          // LAYER 3: Bottom Elements (Reset & Goal)
+          // LAYER 3: Bottom Elements (Reset & Goal & Undo)
           // ------------------------------------------------
           // Pinned to bottom to avoid overlapping the center ring
           Positioned(
@@ -174,42 +178,64 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
                 const SizedBox(height: 20),
-                GestureDetector(
-                  onLongPress: () =>
-                      _showResetOptions(context, notifier, activeMantra.id),
-                  onTap: () {
-                    HapticFeedback.lightImpact();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text("Hold to Reset",
-                            style: GoogleFonts.outfit(color: Colors.black)),
-                        backgroundColor: mantraColor,
-                        duration: const Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(20)),
-                      ),
-                    );
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 24, vertical: 12),
-                    decoration: BoxDecoration(
-                      border:
-                          Border.all(color: mantraColor.withValues(alpha: 0.3)),
-                      borderRadius: BorderRadius.circular(30),
-                      color: Colors.black.withValues(alpha: 0.2),
-                    ),
-                    child: Text(
-                      "HOLD TO RESET",
-                      style: GoogleFonts.outfit(
-                        color: mantraColor,
-                        letterSpacing: 1.5,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Undo Button
+                    GestureDetector(
+                      onTap: () => notifier.decrement(),
+                      child: Container(
+                        width: 50,
+                        height: 50,
+                        margin: const EdgeInsets.only(right: 20),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white12),
+                        ),
+                        child: const Icon(Icons.remove, color: Colors.white54),
                       ),
                     ),
-                  ),
+
+                    // Reset Button
+                    GestureDetector(
+                      onLongPress: () =>
+                          _showResetOptions(context, notifier, activeMantra.id),
+                      onTap: () {
+                        HapticFeedback.lightImpact();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text("Keep Holding to Reset...",
+                                style: GoogleFonts.outfit(color: Colors.black)),
+                            backgroundColor: mantraColor,
+                            duration: const Duration(seconds: 1),
+                            behavior: SnackBarBehavior.floating,
+                            shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(20)),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 16), // Increased hit area
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: mantraColor.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(30),
+                          color: Colors.black.withValues(alpha: 0.2),
+                        ),
+                        child: Text(
+                          "HOLD TO RESET",
+                          style: GoogleFonts.outfit(
+                            color: mantraColor,
+                            letterSpacing: 1.5,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -265,6 +291,63 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               ),
             ),
           ),
+
+          // ------------------------------------------------
+          // LAYER 5: Mala Completion Overlay
+          // ------------------------------------------------
+          if (counterState.isMalaCompleted)
+            Positioned.fill(
+              child: Container(
+                color: Colors.black.withValues(alpha: 0.85),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.check_circle_outline,
+                          color: Color(0xFFFFD700), size: 80),
+                      const SizedBox(height: 30),
+                      Text("Mala Completed!",
+                          style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 32,
+                              fontWeight: FontWeight.bold)),
+                      const SizedBox(height: 10),
+                      Text("${activeMantra.goal} chants done",
+                          style: GoogleFonts.outfit(
+                            color: Colors.white54,
+                            fontSize: 16,
+                          )),
+                      const SizedBox(height: 50),
+                      GestureDetector(
+                        onTap: () {
+                          notifier.completeMala();
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 40, vertical: 20),
+                          decoration: BoxDecoration(
+                              color: mantraColor,
+                              borderRadius: BorderRadius.circular(40),
+                              boxShadow: [
+                                BoxShadow(
+                                    color: mantraColor.withValues(alpha: 0.4),
+                                    blurRadius: 20,
+                                    offset: const Offset(0, 10))
+                              ]),
+                          child: Text("START NEXT MALA",
+                              style: GoogleFonts.outfit(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                  letterSpacing: 1)),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );

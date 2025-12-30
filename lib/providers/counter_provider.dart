@@ -17,6 +17,8 @@ class CounterState {
   final bool isTactileMode;
   final bool isSoundEnabled;
   final bool isHapticsEnabled;
+  final bool autoStopOnMala; // V4: New setting
+  final bool isMalaCompleted; // V4: New state
   final int currentStreak;
   final String? lastPracticeDate;
   final List<Map<String, dynamic>> history;
@@ -29,6 +31,8 @@ class CounterState {
     this.isTactileMode = true,
     this.isSoundEnabled = false,
     this.isHapticsEnabled = true,
+    this.autoStopOnMala = true, // Default true
+    this.isMalaCompleted = false,
     this.currentStreak = 0,
     this.lastPracticeDate,
     this.history = const [],
@@ -51,6 +55,8 @@ class CounterState {
     bool? isTactileMode,
     bool? isSoundEnabled,
     bool? isHapticsEnabled,
+    bool? autoStopOnMala,
+    bool? isMalaCompleted,
     int? currentStreak,
     String? lastPracticeDate,
     List<Map<String, dynamic>>? history,
@@ -63,6 +69,8 @@ class CounterState {
       isTactileMode: isTactileMode ?? this.isTactileMode,
       isSoundEnabled: isSoundEnabled ?? this.isSoundEnabled,
       isHapticsEnabled: isHapticsEnabled ?? this.isHapticsEnabled,
+      autoStopOnMala: autoStopOnMala ?? this.autoStopOnMala,
+      isMalaCompleted: isMalaCompleted ?? this.isMalaCompleted,
       currentStreak: currentStreak ?? this.currentStreak,
       lastPracticeDate: lastPracticeDate ?? this.lastPracticeDate,
       history: history ?? this.history,
@@ -103,6 +111,7 @@ class CounterNotifier extends StateNotifier<CounterState> {
   static const _keyTactile = 'tactile_mode';
   static const _keySound = 'sound_enabled';
   static const _keyHaptics = 'haptics_enabled';
+  static const _keyAutoStop = 'auto_stop_on_mala'; // V4 Key
   static const _keyStreak = 'current_streak';
   static const _keyLastDate = 'last_practice_date';
   static const _keyHistory = 'history';
@@ -120,6 +129,7 @@ class CounterNotifier extends StateNotifier<CounterState> {
     final isTactile = prefs.getBool(_keyTactile) ?? true;
     final isSound = prefs.getBool(_keySound) ?? false;
     final isHaptics = prefs.getBool(_keyHaptics) ?? true;
+    final autoStop = prefs.getBool(_keyAutoStop) ?? true; // V4 Load
     final streak = prefs.getInt(_keyStreak) ?? 0;
     final lastDate = prefs.getString(_keyLastDate);
 
@@ -187,6 +197,7 @@ class CounterNotifier extends StateNotifier<CounterState> {
       isTactileMode: isTactile,
       isSoundEnabled: isSound,
       isHapticsEnabled: isHaptics,
+      autoStopOnMala: autoStop,
       currentStreak: streak,
       lastPracticeDate: lastDate,
       history: history,
@@ -211,6 +222,7 @@ class CounterNotifier extends StateNotifier<CounterState> {
     await prefs.setBool(_keyTactile, state.isTactileMode);
     await prefs.setBool(_keySound, state.isSoundEnabled);
     await prefs.setBool(_keyHaptics, state.isHapticsEnabled);
+    await prefs.setBool(_keyAutoStop, state.autoStopOnMala);
     await prefs.setInt(_keyStreak, state.currentStreak);
     if (state.lastPracticeDate != null) {
       await prefs.setString(_keyLastDate, state.lastPracticeDate!);
@@ -278,29 +290,54 @@ class CounterNotifier extends StateNotifier<CounterState> {
 
   Future<void> increment() async {
     if (state.activeMantra == null) return;
-
-    if (state.isHapticsEnabled) {
-      HapticFeedback.mediumImpact();
-    }
-    if (state.isSoundEnabled) {
-      try {
-        await _audioPlayer.stop();
-        await _audioPlayer.play(AssetSource('sounds/click_sound.wav'),
-            mode: PlayerMode.lowLatency);
-      } catch (_) {}
-    }
+    if (state.isMalaCompleted)
+      return; // Prevent counting if waiting for next mala
 
     // Update Mantra
     final active = state.activeMantra!;
     int newCount = active.count + 1;
     int newMala = active.malaCount;
+    bool malaCompletedNow = false;
 
+    // Check Goal
     if (newCount >= active.goal) {
       if (state.isHapticsEnabled) {
-        HapticFeedback.vibrate();
+        // Heavy Haptic for completion
+        HapticFeedback.heavyImpact();
+        Future.delayed(const Duration(milliseconds: 150),
+            () => HapticFeedback.heavyImpact());
       }
-      newCount = 0;
-      newMala += 1;
+
+      // Play Chime
+      if (state.isSoundEnabled) {
+        try {
+          await _audioPlayer.stop();
+          await _audioPlayer.play(AssetSource('sounds/Chime.wav'),
+              mode: PlayerMode.lowLatency);
+        } catch (_) {}
+      }
+
+      if (state.autoStopOnMala) {
+        // V4 Logic: Stop at goal, set completed flag
+        newCount = active.goal; // Cap at goal
+        malaCompletedNow = true;
+      } else {
+        // Legacy Logic: Auto-loop
+        newCount = 0;
+        newMala += 1;
+      }
+    } else {
+      // Normal Increment
+      if (state.isHapticsEnabled) {
+        HapticFeedback.mediumImpact();
+      }
+      if (state.isSoundEnabled) {
+        try {
+          await _audioPlayer.stop();
+          await _audioPlayer.play(AssetSource('sounds/click_sound.wav'),
+              mode: PlayerMode.lowLatency);
+        } catch (_) {}
+      }
     }
 
     final updatedMantra = active.copyWith(count: newCount, malaCount: newMala);
@@ -315,19 +352,91 @@ class CounterNotifier extends StateNotifier<CounterState> {
     final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     int newStreak = state.currentStreak;
     if (state.lastPracticeDate != today) {
-      // Update logic inside updateStreak or here?
-      // Let's do a helper that returns the new streak val for purity
       newStreak = _calculateNewStreak(today);
     }
 
     state = state.copyWith(
-        mantras: updatedList,
-        totalLifetimeCount: newLifetime,
-        currentStreak: newStreak,
-        lastPracticeDate: today);
+      mantras: updatedList,
+      totalLifetimeCount: newLifetime,
+      currentStreak: newStreak,
+      lastPracticeDate: today,
+      isMalaCompleted: malaCompletedNow,
+    );
 
     _saveState();
     _updateDailyHistory();
+  }
+
+  // V4: Explicitly start next mala
+  void completeMala() {
+    if (state.activeMantra == null) return;
+
+    final active = state.activeMantra!;
+    // Reset count, increment mala
+    final updatedMantra =
+        active.copyWith(count: 0, malaCount: active.malaCount + 1);
+    final updatedList = state.mantras
+        .map((m) => m.id == active.id ? updatedMantra : m)
+        .toList();
+
+    state = state.copyWith(mantras: updatedList, isMalaCompleted: false);
+    _saveState();
+  }
+
+  // V4: Undo/Decrement
+  Future<void> decrement() async {
+    if (state.activeMantra == null) return;
+    if (state.isMalaCompleted) return;
+
+    final active = state.activeMantra!;
+    if (active.count <= 0) return;
+
+    if (state.isHapticsEnabled) {
+      HapticFeedback.lightImpact();
+    }
+    if (state.isSoundEnabled) {
+      try {
+        await _audioPlayer.stop(); // Click sound for decrement too
+        await _audioPlayer.play(AssetSource('sounds/click_sound.wav'),
+            mode: PlayerMode.lowLatency);
+      } catch (_) {}
+    }
+
+    final updatedMantra = active.copyWith(count: active.count - 1);
+    final updatedList = state.mantras
+        .map((m) => m.id == active.id ? updatedMantra : m)
+        .toList();
+
+    // Decrement lifetime count too? Usually yes for "Undo".
+    int newLifetime =
+        state.totalLifetimeCount > 0 ? state.totalLifetimeCount - 1 : 0;
+
+    // We do NOT decrement streaks usually as they are "days practiced", not "counts"
+
+    state = state.copyWith(
+      mantras: updatedList,
+      totalLifetimeCount: newLifetime,
+    );
+    _saveState();
+    // Also remove from today's history if possible?
+    // For simplicity, we just update stats. History graph might be slight off if not decremented,
+    // but _updateDailyHistory is append-only usually.
+    // Let's actually decrement history for accuracy.
+    _decrementDailyHistory();
+  }
+
+  void _decrementDailyHistory() {
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    List<Map<String, dynamic>> newHistory = List.from(state.history);
+    final index = newHistory.indexWhere((element) => element['date'] == today);
+
+    if (index != -1) {
+      int currentDaily = newHistory[index]['count'] as int;
+      if (currentDaily > 0) {
+        newHistory[index] = {'date': today, 'count': currentDaily - 1};
+        state = state.copyWith(history: newHistory);
+      }
+    }
   }
 
   int _calculateNewStreak(String today) {
@@ -432,6 +541,11 @@ class CounterNotifier extends StateNotifier<CounterState> {
 
   void toggleHaptics() {
     state = state.copyWith(isHapticsEnabled: !state.isHapticsEnabled);
+    _saveState();
+  }
+
+  void toggleAutoStop() {
+    state = state.copyWith(autoStopOnMala: !state.autoStopOnMala);
     _saveState();
   }
 }
