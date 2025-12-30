@@ -235,9 +235,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.2),
                           shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white12),
+                          border: Border.all(color: const Color.fromARGB(151, 255, 255, 255)),
                         ),
-                        child: const Icon(Icons.remove, color: Colors.white54),
+                        child: const Icon(Icons.remove, color: Colors.white),
                       ),
                     ),
 

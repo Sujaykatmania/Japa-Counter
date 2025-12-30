@@ -299,8 +299,9 @@ class CounterNotifier extends StateNotifier<CounterState> {
 
   Future<void> increment() async {
     if (state.activeMantra == null) return;
-    if (state.isMalaCompleted)
+    if (state.isMalaCompleted) {
       return; // Prevent counting if waiting for next mala
+    }
 
     // Update Mantra
     final active = state.activeMantra!;
