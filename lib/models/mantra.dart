@@ -1,3 +1,10 @@
+// Sentinel for distinguishing "no value passed" from "explicitly pass null"
+class MantraSentinel {
+  const MantraSentinel();
+}
+
+const mantraSentinel = MantraSentinel();
+
 class Mantra {
   final String id;
   final String name;
@@ -27,9 +34,9 @@ class Mantra {
     int? malaCount,
     int? goal,
     int? color,
-    String? backgroundPath,
+    Object? backgroundPath = mantraSentinel, // Sentinel to allow explicit null
     double? overlayOpacity,
-    String? chantText,
+    Object? chantText = mantraSentinel, // Sentinel to allow explicit null
   }) {
     return Mantra(
       id: id,
@@ -38,9 +45,12 @@ class Mantra {
       malaCount: malaCount ?? this.malaCount,
       goal: goal ?? this.goal,
       color: color ?? this.color,
-      backgroundPath: backgroundPath ?? this.backgroundPath,
+      backgroundPath: backgroundPath == mantraSentinel
+          ? this.backgroundPath
+          : backgroundPath as String?,
       overlayOpacity: overlayOpacity ?? this.overlayOpacity,
-      chantText: chantText ?? this.chantText,
+      chantText:
+          chantText == mantraSentinel ? this.chantText : chantText as String?,
     );
   }
 

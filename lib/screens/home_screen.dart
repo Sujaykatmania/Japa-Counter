@@ -68,6 +68,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       Image.file(
                         File(activeMantra.backgroundPath!),
                         fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback to transparent if file is missing/corrupted
+                          return Container(color: Colors.transparent);
+                        },
                       ),
                       Container(
                         color: Colors.black
@@ -416,51 +420,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showAddMantraDialog(BuildContext context, CounterNotifier notifier) {
-    final nameController = TextEditingController();
-    final goalController = TextEditingController(text: "108");
-
     showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-              backgroundColor: const Color(0xFF2C2C2C),
-              title: Text("New Mantra",
-                  style: GoogleFonts.outfit(color: Colors.white)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    style: GoogleFonts.outfit(color: Colors.white),
-                    decoration: const InputDecoration(
-                        labelText: "Mantra Name",
-                        labelStyle: TextStyle(color: Colors.white54)),
-                  ),
-                  TextField(
-                    controller: goalController,
-                    keyboardType: TextInputType.number,
-                    style: GoogleFonts.outfit(color: Colors.white),
-                    decoration: const InputDecoration(
-                        labelText: "Goal (e.g. 108)",
-                        labelStyle: TextStyle(color: Colors.white54)),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                    onPressed: () => Navigator.pop(ctx),
-                    child: const Text("Cancel")),
-                TextButton(
-                  child: const Text("Create"),
-                  onPressed: () {
-                    final goal = int.tryParse(goalController.text) ?? 108;
-                    if (nameController.text.isNotEmpty) {
-                      notifier.addMantra(nameController.text, goal);
-                      Navigator.pop(ctx);
-                    }
-                  },
-                )
-              ],
-            ));
+      context: context,
+      builder: (ctx) => _AddMantraDialog(notifier: notifier),
+    );
   }
 
   void _showResetOptions(
@@ -991,6 +954,264 @@ class _EditMantraDialogState extends State<_EditMantraDialog> {
               Navigator.pop(context);
             }
           },
+        )
+      ],
+    );
+  }
+}
+
+// ----------------------------------------------------------
+// ADD MANTRA DIALOG (Matches Edit Dialog UI)
+// ----------------------------------------------------------
+class _AddMantraDialog extends StatefulWidget {
+  final CounterNotifier notifier;
+
+  const _AddMantraDialog({required this.notifier});
+
+  @override
+  State<_AddMantraDialog> createState() => _AddMantraDialogState();
+}
+
+class _AddMantraDialogState extends State<_AddMantraDialog> {
+  final _formKey = GlobalKey<FormState>();
+  late TextEditingController nameController;
+  late TextEditingController goalController;
+  late TextEditingController chantController;
+  String? bgPath;
+  double overlayOpacity = 0.5;
+  bool _isNameEmpty = true;
+
+  @override
+  void initState() {
+    super.initState();
+    nameController = TextEditingController();
+    goalController = TextEditingController(text: "108");
+    chantController = TextEditingController();
+    nameController.addListener(_onNameChanged);
+  }
+
+  void _onNameChanged() {
+    final isEmpty = nameController.text.trim().isEmpty;
+    if (isEmpty != _isNameEmpty) {
+      setState(() {
+        _isNameEmpty = isEmpty;
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    nameController.removeListener(_onNameChanged);
+    nameController.dispose();
+    goalController.dispose();
+    chantController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    if (image != null) {
+      // Persistence Logic: Copy to App Doc Dir
+      final appDir = await getApplicationDocumentsDirectory();
+      final fileName = path.basename(image.path);
+      final savedImage =
+          await File(image.path).copy('${appDir.path}/$fileName');
+
+      setState(() {
+        bgPath = savedImage.path;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Default color for new mantra (will be assigned randomly on create)
+    const mColor = Color(0xFFFFD700); // Gold accent for create dialog
+
+    return AlertDialog(
+      backgroundColor: const Color(0xFF2C2C2C),
+      title: Text("New Mantra", style: GoogleFonts.outfit(color: Colors.white)),
+      content: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Name with red asterisk
+              TextFormField(
+                controller: nameController,
+                style: GoogleFonts.outfit(color: Colors.white),
+                decoration: InputDecoration(
+                  label: RichText(
+                    text: TextSpan(
+                      text: "Mantra Name ",
+                      style: GoogleFonts.outfit(color: Colors.white54),
+                      children: const [
+                        TextSpan(
+                          text: "*",
+                          style: TextStyle(color: Colors.red),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return "Name is required";
+                  }
+                  return null;
+                },
+              ),
+
+              // Goal
+              TextField(
+                controller: goalController,
+                keyboardType: TextInputType.number,
+                style: GoogleFonts.outfit(color: Colors.white),
+                decoration: const InputDecoration(
+                    labelText: "Goal",
+                    labelStyle: TextStyle(color: Colors.white54)),
+              ),
+
+              // Chant Text
+              TextField(
+                controller: chantController,
+                maxLines: 2,
+                style: GoogleFonts.cinzel(color: Colors.white),
+                decoration: const InputDecoration(
+                    labelText: "Chant Text / Prayer (Optional)",
+                    labelStyle: TextStyle(color: Colors.white54)),
+              ),
+              const SizedBox(height: 25),
+
+              // Visuals Section Header
+              Text("Background Visuals",
+                  style: GoogleFonts.outfit(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold)),
+              const SizedBox(height: 15),
+
+              // LIVE PREVIEW Container
+              Center(
+                child: Container(
+                  width: double.infinity,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.black,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  clipBehavior: Clip.hardEdge,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      if (bgPath != null)
+                        Image.file(File(bgPath!), fit: BoxFit.cover),
+
+                      // Overlay Preview
+                      Container(
+                        color: bgPath != null
+                            ? Colors.black.withValues(alpha: overlayOpacity)
+                            : Colors.transparent,
+                      ),
+
+                      // Label if empty
+                      if (bgPath == null)
+                        Center(
+                            child: Text("No Image Selected",
+                                style:
+                                    GoogleFonts.outfit(color: Colors.white24))),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 10),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _pickImage,
+                    icon: const Icon(Icons.add_photo_alternate, size: 18),
+                    label: Text(bgPath == null ? "Pick" : "Change"),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white10,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(horizontal: 16)),
+                  ),
+                  if (bgPath != null)
+                    TextButton.icon(
+                        onPressed: () => setState(() => bgPath = null),
+                        icon: const Icon(Icons.close,
+                            color: Colors.redAccent, size: 18),
+                        label: Text("Remove",
+                            style: GoogleFonts.outfit(color: Colors.redAccent)))
+                ],
+              ),
+
+              // Opacity Slider (Only if image selected)
+              if (bgPath != null) ...[
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text("Dimming",
+                        style: GoogleFonts.outfit(
+                            color: Colors.white54, fontSize: 12)),
+                    Text("${(overlayOpacity * 100).toInt()}%",
+                        style: GoogleFonts.outfit(
+                            color: mColor, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                Slider(
+                  value: overlayOpacity,
+                  min: 0.0,
+                  max: 1.0,
+                  activeColor: mColor,
+                  inactiveColor: Colors.white10,
+                  onChanged: (val) {
+                    setState(() {
+                      overlayOpacity = val;
+                    });
+                  },
+                ),
+              ]
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancel")),
+        TextButton(
+          onPressed: _isNameEmpty
+              ? null // Disabled when name is empty
+              : () {
+                  if (_formKey.currentState!.validate()) {
+                    final goal = int.tryParse(goalController.text) ?? 108;
+                    widget.notifier.addMantra(
+                      nameController.text.trim(),
+                      goal,
+                      backgroundPath: bgPath,
+                      overlayOpacity: overlayOpacity,
+                      chantText: chantController.text.isEmpty
+                          ? null
+                          : chantController.text,
+                    );
+                    Navigator.pop(context);
+                  }
+                },
+          child: Text(
+            "Create",
+            style: TextStyle(
+              color: _isNameEmpty ? Colors.grey : null,
+            ),
+          ),
         )
       ],
     );

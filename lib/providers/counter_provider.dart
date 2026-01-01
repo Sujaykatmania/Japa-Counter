@@ -234,13 +234,19 @@ class CounterNotifier extends StateNotifier<CounterState> {
     return _zenColors[Random().nextInt(_zenColors.length)];
   }
 
-  void addMantra(String name, int goal) {
+  void addMantra(String name, int goal,
+      {String? backgroundPath,
+      double overlayOpacity = 0.5,
+      String? chantText}) {
     if (name.isEmpty) return;
     final newMantra = Mantra(
       id: _uuid.v4(),
       name: name,
       goal: goal,
       color: _getRandomZenColor(),
+      backgroundPath: backgroundPath,
+      overlayOpacity: overlayOpacity,
+      chantText: chantText,
     );
 
     state = state.copyWith(
@@ -253,9 +259,9 @@ class CounterNotifier extends StateNotifier<CounterState> {
   void updateMantra(String id,
       {String? name,
       int? goal,
-      String? backgroundPath,
+      Object? backgroundPath = mantraSentinel,
       double? overlayOpacity,
-      String? chantText}) {
+      Object? chantText = mantraSentinel}) {
     final updatedList = state.mantras.map((m) {
       if (m.id == id) {
         return m.copyWith(
